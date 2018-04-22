@@ -1,0 +1,22 @@
+{
+  "name": "mapa-latam",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "dependencies": {
+    "ckan": "^0.2.3",
+    "d3": "^5.1.0",
+    "d3-queue": "^3.0.7",
+    "http-server": "^0.11.1",
+    "jquery": "^3.3.1",
+    "leaflet": "^1.3.1",
+    "leaflet.markercluster": "^1.3.0",
+    "ogr2ogr": "^1.2.1"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC"
+}

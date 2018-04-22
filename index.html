@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<style>
+#map {
+			width: auto;
+			height: 800px;
+		}
+.mycluster {
+  background-color: #ff87b0;
+  border-radius: 20px;
+  text-align: center;
+  line-height: 40px;
+  font-weight: bold;
+}
+.leaflet-popup-content {
+    height: 400px;
+    overflow-y: scroll;
+}
+</style>
+<link rel="stylesheet" href="node_modules/leaflet/dist/leaflet.css" />
+<link rel="stylesheet" href="node_modules/leaflet.markercluster/dist/MarkerCluster.css" />
+<link rel="stylesheet" href="node_modules/leaflet.markercluster/dist/MarkerCluster.Default.css" />
+</meta>
+<body>
+<div id='map' ></div>
+<script src="node_modules/d3/dist/d3.min.js"></script>
+<script src="node_modules/leaflet/dist/leaflet.js"></script>
+<script src="node_modules/leaflet.markercluster/dist/leaflet.markercluster.js"></script>
+<script src="node_modules/d3-queue/build/d3-queue.min.js"></script>
+<script>
+
+	var map = L.map('map');
+
+	L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+	  attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+	}).addTo(map);
+
+	var datasets = [
+		["datos/argentina-2016.geojson", "http://d.techo.org/dataset/argentina-relevamiento-asentamientos-informales-2016/resource/db99d997-bdd4-46c7-8c58-a0502c930f52"],
+		["datos/colombia-2015.geojson", "http://d.techo.org/dataset/colombia-derecho-a-bogota-2015/resource/5f2f9615-4b6a-4676-9702-0114f020c119"],
+		["datos/paraguay-2015.geojson", "http://d.techo.org/dataset/rai-paraguay-2016/resource/32d2f013-12ef-4812-87b0-608371ca011c"],
+		["datos/guatemala-2016.geojson", "http://d.techo.org/dataset/censo-de-asentamientos-guatemala-2015/resource/0ed7f3bc-38cc-4bb1-b99f-4ca306762246"]
+	]
+	var dataset = L.layerGroup();
+
+	function request(d,url,callback) {
+		d3.json(d, function(e,d) {if (e) throw e;}).then(function(data){
+		var layer = L.geoJSON(data).bindPopup(function(l){
+			var b = "<a href='"+url+"' target='_blank' >Link a db original</a><br/>";
+			var ps = l.feature.properties;
+			for (var p in ps)
+					if (ps.hasOwnProperty(p))
+							b+= "<b>" + p + "</b>: " + ps[p] + "<br/>";
+			return b;
+		 });
+		console.log(layer);
+		dataset.addLayer(layer);
+	  callback(null);
+		});
+	}
+
+	var q = d3.queue()
+	.defer(request,datasets[0][0],datasets[0][1])
+	.defer(request,datasets[1][0],datasets[1][1])
+	.defer(request,datasets[2][0],datasets[2][1])
+	.defer(request,datasets[3][0],datasets[3][1])
+	.await(function(error) {
+	  if (error) throw error;
+	  console.log("Terminé!");
+
+		//marker groups
+		var cluster_markers = L.layerGroup();
+		dataset.eachLayer(function (l){
+			l.eachLayer(function (ll){
+				var f = ll.feature;
+				if (f.geometry.coordinates.length != 0) {
+					var c = L.polygon(f.geometry.coordinates).getBounds().getCenter();
+					cluster_markers.addLayer(L.marker(L.latLng(c.lng,c.lat)));
+				}
+			});
+		});
+
+		var grouping = L.markerClusterGroup({
+			iconCreateFunction: function (cluster) {
+				var markers = cluster.getAllChildMarkers();
+				return L.divIcon({ html: markers.length, className: 'mycluster', iconSize: L.point(40, 40) });
+			},
+			showCoverageOnHover: false,
+			singleMarkerMode: true,
+			disableClusteringAtZoom: 10,
+			spiderfyOnMaxZoom: false
+		});
+		grouping.addLayer(cluster_markers);
+		map.addLayer(grouping);
+		map.fitBounds(grouping.getBounds());
+
+		//change layer with zoom
+		map.on('zoomend', function() {
+			if (map.getZoom() <10){
+				if (map.hasLayer(dataset))
+						map.removeLayer(dataset);
+				map.addLayer(grouping);
+			}
+			if (map.getZoom() >= 10){
+				map.removeLayer(grouping);
+				map.addLayer(dataset);
+			}
+		});
+
+		//change layer with zoom
+    map.on('zoomend', function() {
+      if (map.getZoom() <10){
+        if (map.hasLayer(dataset))
+            map.removeLayer(dataset);
+        map.addLayer(grouping);
+      }
+      if (map.getZoom() >= 10){
+        map.removeLayer(grouping);
+        map.addLayer(dataset);
+      }
+    });
+
+	});
+
+</script>
+</body>
+</html>
